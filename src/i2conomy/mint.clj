@@ -4,49 +4,75 @@
 
 (def transfers (ref ()))
 
-(defrecord Account [name balance-ref])
+(defrecord Account [name balances])
 
 (defrecord Transfer [timestamp from to currency amount memo])
 
+(defn- throw-nonexisting-account-exception [name]
+  (throw (IllegalArgumentException.
+           (str "account " name " does not exist"))))
+
+(defn- throw-nonexisting-currency-exception [name]
+  (throw (IllegalArgumentException.
+           (str "currency " name " does not exist"))))
+
+(defn- throw-insufficient-balance-exception [name currency]
+  (throw (IllegalArgumentException.
+           (str "insufficient balance for " name " on currency " currency))))
+
+(defn account-exists? [name]
+  (contains? @accounts name))
+
+(defn currency-exists? [name]
+  (account-exists? name))
+
 (defn balance
-  "Gets the balance of an account"
-  [name]
+  "Gets the balance of an account for given currency"
+  [name currency]
     (if-let [account (get @accounts name)]
-      @(:balance-ref account)))
+      (get @(:balances account) currency 0)
+      (throw-nonexisting-account-exception name)))
 
 (defn create-account
   "Creates a new account"
   [name]
   (dosync
     (let [now (java.util.Date.)
-          account (Account. name (ref 0))]
+          account (Account. name (ref (sorted-map)))]
       (alter accounts assoc name account))))
+
+(defn- add-or-set
+  "Returns the sum of x and y. If x is nil it returns y."
+  [x y]
+  (if (nil? x) y
+    (+ x y)))
 
 (defn- update-balance
   "Modifies the balance of an account, to be used within a transation"
-  [account amount]
-  (let [balance-ref (:balance-ref account)]
-    (alter balance-ref + amount)))
+  [account-name currency amount]
+  (let [account (get @accounts account-name)
+        balances (:balances account)]
+    (alter balances #(update-in %1 [currency] add-or-set %2) amount)))
 
 (defn pay
   "Makes a payment between accounts"
   [from to currency amount memo]
   (dosync
-    (let [now (java.util.Date.)
-          transfer (Transfer. now from to currency amount memo)
-          from-account (get @accounts from)
-          to-account (get @accounts to)]
-      (cond
-        (nil? from-account)
-          (throw (IllegalArgumentException.
-                  (str "account " from " does not exist")))
-        (nil? to-account)
-          (throw (IllegalArgumentException.
-                  (str "account " to " does not exist")))
-        :else (do
+    (cond
+      (not (account-exists? from))
+        (throw-nonexisting-account-exception from)
+      (not (account-exists? to))
+        (throw-nonexisting-account-exception to)
+      (not (currency-exists? currency))
+        (throw-nonexisting-currency-exception currency)
+      (and (not= from currency) (> amount (balance from currency)))
+        (throw-insufficient-balance-exception from currency)
+      :else
+        (let [now (java.util.Date.)
+              transfer (Transfer. now from to currency amount memo)]
           (alter transfers conj transfer)
-          (update-balance from-account (- amount))
-          (update-balance to-account amount))))))
+          (update-balance from currency (- amount))
+          (update-balance to currency amount)))))
 
 (defn reset-all!
   "Resets all accounts and transfers, use with care!"
