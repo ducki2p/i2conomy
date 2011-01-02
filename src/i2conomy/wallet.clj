@@ -24,6 +24,8 @@
         [:link {:href "/i2conomy.css" :rel "stylesheet" :type "text/css"}]]
       [:body
         [:p "Account: " (session-get :account "Unknown")]
+        (if-let [flash (flash-get :message)]
+          [:p "Message: " flash])
         content])))
 
 (defn view-balance-input []
@@ -34,24 +36,12 @@
       [:label "Currency: "] [:input {:type "text" :name "currency" :value "duck"}]
       [:input {:type "submit" :value "check"}]]))
 
-(defn view-balance-output [account currency amount]
-  (view-layout
-    [:h2 "balance"]
-    [:p "the balance for " account " is " amount currency]
-    [:a {:href "/"} "home"]))
-
 (defn view-create-account-input []
   (html
     [:h2 "create account"]
     [:form {:method "post" :action "/create-account"}
       [:label "Account: "] [:input {:type "text" :name "account" :value "duck"}]
       [:input {:type "submit" :value "create"}]]))
-
-(defn view-create-account-output [account]
-  (view-layout
-    [:h2 "create account"]
-    [:p "account " account " created"]
-    [:a {:href "/"} "home"]))
 
 (defn view-payment-input []
   (html
@@ -64,12 +54,6 @@
       [:label "Memo: "] [:input {:type "text" :name "memo"}]
       [:input {:type "submit" :value "pay"}]]))
 
-(defn view-payment-output [from to currency amount memo]
-  (view-layout
-    [:h2 "payment made"]
-    [:p "from " from " to " to " amount " amount " currency " currency " memo " memo]
-    [:a {:href "/"} "home"]))
-
 (defroutes handler
   (GET "/" []
     (view-layout
@@ -79,13 +63,15 @@
 
   (POST "/balance" [account currency]
     (let [balance (mint/balance account currency)]
-      (view-balance-output account currency balance)))
+      (flash-put! :message (str "Balance for " account "'s account: " balance " " currency " IOU"))
+      (redirect "/")))
 
   (POST "/create-account" [account]
     (do
       (mint/create-account account)
       (session-put! :account account)
-      (view-create-account-output account)))
+      (flash-put! :message (str "Account " account " created"))
+      (redirect "/")))
 
   (POST "/pay" [from to currency amount memo]
     (view-payment-output from to currency amount memo))
