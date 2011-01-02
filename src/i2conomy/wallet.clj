@@ -43,6 +43,17 @@
       [:label "Account: "] [:input {:type "text" :name "account" :value "duck"}]
       [:input {:type "submit" :value "create"}]]))
 
+(defn view-history [history]
+  (html
+    [:h2 "history"]
+    [:table
+      [:tr
+        [:th "Timestamp"] [:th "From"] [:th "To"] [:th "Currency"] [:th "Amount"] [:th "Memo"]]
+      (for [transfer history]
+        (let [{:keys [timestamp from to amount currency memo]} transfer]
+          [:tr
+            [:td timestamp] [:td from] [:td to] [:td currency] [:td amount] [:td memo]]))]))
+
 (defn view-payment-input []
   (html
     [:h2 "make payment"]
@@ -59,7 +70,9 @@
     (view-layout
       (view-create-account-input)
       (view-balance-input)
-      (view-payment-input)))
+      (view-payment-input)
+      (if-let [account (session-get :account)]
+        (view-history (mint/history account)))))
 
   (POST "/balance" [account currency]
     (let [balance (mint/balance account currency)]
