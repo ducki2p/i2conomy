@@ -73,3 +73,16 @@
     (reset-all!)
     (create-account "alice")
     (is (= 0 (balance "alice" "alice")))))
+
+(deftest simple-history
+  (do
+    (reset-all!)
+    (create-account "alice")
+    (create-account "bob")
+    (create-account "charlie")
+    (is (= 0 (count (history "alice"))))
+    (pay "alice" "bob" "alice" 100 "groceries")
+    (pay "bob" "charlie" "alice" 90 "drinks")
+    (is (= 1 (count (history "alice"))))
+    (is (= 2 (count (history "bob"))))))
+

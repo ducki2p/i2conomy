@@ -74,6 +74,16 @@
           (update-balance from currency (- amount))
           (update-balance to currency amount)))))
 
+(defn history
+  "Gets the history of an account"
+  [name]
+    (if-let [account (get @accounts name)]
+      (filter #(or
+                 (= name (:to %))
+                 (= name (:from %)))
+              @transfers)
+      (throw-nonexisting-account-exception name)))
+
 (defn reset-all!
   "Resets all accounts and transfers, use with care!"
   []
