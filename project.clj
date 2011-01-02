@@ -6,6 +6,7 @@
                  [ring/ring-devel "0.3.5"]
                  [ring/ring-jetty-adapter "0.3.5"]
                  [compojure "0.5.3"]
-                 [hiccup "0.3.1"]]
+                 [hiccup "0.3.1"]
+                 [sandbar/sandbar "0.3.0"]]
   :dev-dependencies [[lein-run "1.0.1-SNAPSHOT"]]
   :main script.run)

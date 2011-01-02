@@ -1,14 +1,17 @@
 (ns i2conomy.wallet
-  (:use i2conomy.middleware)
   (:require [i2conomy.mint :as mint])
-  (:use compojure.core)
-  (:use hiccup.core)
-  (:use hiccup.page-helpers)
-  (:use ring.middleware.file)
-  (:use ring.middleware.file-info)
-  (:use ring.middleware.reload)
-  (:use ring.middleware.stacktrace)
-  (:use ring.util.response))
+  (:use i2conomy.middleware
+        i2conomy.session
+        compojure.core
+        hiccup.core
+        hiccup.page-helpers
+        ring.middleware.file
+        ring.middleware.file-info
+        ring.middleware.reload
+        ring.middleware.stacktrace
+        ring.middleware.session.memory
+        ring.util.response
+        sandbar.stateful-session))
 
 (defn view-layout [& content]
   (html
@@ -19,7 +22,9 @@
                 :content "text/html; charset=utf-8"}]
         [:title "i2conomy"]
         [:link {:href "/i2conomy.css" :rel "stylesheet" :type "text/css"}]]
-      [:body content])))
+      [:body
+        [:p "Account: " (session-get :account "Unknown")]
+        content])))
 
 (defn view-balance-input []
   (html
@@ -79,6 +84,7 @@
   (POST "/create-account" [account]
     (do
       (mint/create-account account)
+      (session-put! :account account)
       (view-create-account-output account)))
 
   (POST "/pay" [from to currency amount memo]
@@ -102,5 +108,7 @@
     (wrap-bounce-favicon)
     (wrap-exception-logging)
     (wrap-if production?  wrap-failsafe)
-    (wrap-if development? wrap-stacktrace)))
+    (wrap-if development? wrap-stacktrace)
+    ; prevent wrap-reload from resetting the sessions as well
+    (wrap-stateful-session {:store (memory-store custom-session-atom)})))
 
