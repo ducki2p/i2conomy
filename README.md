@@ -4,7 +4,9 @@ IOU based distributed currency for I2P.
 
 ## Usage
 
-FIXME: write
+    $ lein run
+
+Open the wallet on http://localhost:8000/
 
 ## License
 
