@@ -74,7 +74,10 @@
       (redirect "/")))
 
   (POST "/pay" [from to currency amount memo]
-    (view-payment-output from to currency amount memo))
+    (do
+      (mint/pay from to currency (Integer/parseInt amount) memo)
+      (flash-put! :message (str "Account " to " paid"))
+      (redirect "/")))
 
   (ANY "/*" [path]
     (redirect "/")))
