@@ -1,12 +1,18 @@
 (ns i2conomy.test.mint
   (:use [i2conomy.mint] :reload)
-  (:use [clojure.test :only [deftest is]]))
+  (:use [clojure.test :only [are deftest is]]))
+
+(defmacro are=
+  "Check multiple assertions for equality"
+  [& args]
+  `(are [x y] (= x y) ~@args))
 
 (deftest no-payments
   (do
     (reset-all!)
-    (is (= 0 (count @accounts)))
-    (is (= 0 (count @transfers)))))
+    (are=
+      0 (count @accounts)
+      0 (count @transfers))))
 
 (deftest create-duplicate-account
   (do
@@ -21,10 +27,11 @@
     (create-account "alice")
     (create-account "bob")
     (pay "alice" "bob" "alice" 100 "groceries")
-    (is (= 1 (count @transfers))))
-    (is (= -100 (balance "alice" "alice")))
-    (is (= 100 (balance "bob" "alice")))
-    (is (= {"alice" -100} (balances "alice"))))
+    (are=
+      1     (count @transfers)
+      -100  (balance "alice" "alice")
+      100   (balance "bob" "alice")
+      {"alice" -100} (balances "alice"))))
 
 (deftest multiple-payments
   (do
@@ -35,11 +42,12 @@
     (pay "alice" "bob" "alice" 100 "groceries")
     (pay "bob" "alice" "alice" 5 "refund")
     (pay "charlie" "bob" "charlie" 49 "watermelons")
-    (is (= 3 (count @transfers))))
-    (is (= -95 (balance "alice" "alice")))
-    (is (= 95 (balance "bob" "alice")))
-    (is (= 49 (balance "bob" "charlie")))
-    (is (= {"alice" 95 "charlie" 49} (balances "bob"))))
+    (are=
+      3   (count @transfers)
+      -95 (balance "alice" "alice")
+      95  (balance "bob" "alice")
+      49  (balance "bob" "charlie")
+      {"alice" 95 "charlie" 49} (balances "bob"))))
 
 (deftest foreign-currency-payment
   (do
@@ -86,8 +94,9 @@
   (do
     (reset-all!)
     (create-account "alice")
-    (is (= 0 (balance "alice" "alice")))
-    (is (= {} (balances "alice")))))
+    (are=
+      0  (balance "alice" "alice")
+      {} (balances "alice"))))
 
 (deftest simple-history
   (do
@@ -98,6 +107,7 @@
     (is (= 0 (count (history "alice"))))
     (pay "alice" "bob" "alice" 100 "groceries")
     (pay "bob" "charlie" "alice" 90 "drinks")
-    (is (= 1 (count (history "alice"))))
-    (is (= 2 (count (history "bob"))))))
+    (are=
+      1 (count (history "alice"))
+      2 (count (history "bob")))))
 
