@@ -11,6 +11,7 @@
         ring.middleware.stacktrace
         ring.middleware.session.memory
         ring.util.response
+        sandbar.auth
         sandbar.stateful-session))
 
 (defn view-layout [& content]
@@ -24,23 +25,44 @@
         [:link {:href "/i2conomy.css" :rel "stylesheet" :type "text/css"}]]
       [:body
         [:h1 "I2Conomy"]
-        [:p "Account: " (h (session-get :account "Unknown"))]
+        (when (any-role-granted? :user)
+          [:div
+            [:p "Account: " (h (current-username))]
+            [:p (link-to "/logout" "Logout")]])
         (when-let [flash (flash-get :error)]
           [:p.error "Error: " (h flash)])
         (when-let [flash (flash-get :message)]
           [:p.message "Message: " (h flash)])
         content])))
 
-(defn view-create-account-input []
+(defn view-login []
   (html
-    [:form {:method "post" :action "/create-account"}
+    [:form {:method "post" :action "/login"}
       [:fieldset
-        [:legend "Create Account"]
+        [:legend "Login"]
         [:div
-          [:label {:for "account"} "Account: "]
-          [:input {:type "text" :id "account" :name "account"}]]]
+          [:label {:for "username"} "Username: "]
+          [:input {:type "text" :id "username" :name "username"}]]
+        [:div
+          [:label {:for "password"} "Password: "]
+          [:input {:type "password" :id "password" :name "password"}]]]
       [:div.button
-        [:input {:type "submit" :value "create"}]]]))
+        [:input {:type "submit" :value "login"}]]
+      [:p (link-to "/signup" "Signup")]]))
+
+(defn view-signup []
+  (html
+    [:form {:method "post" :action "/signup"}
+      [:fieldset
+        [:legend "Signup"]
+        [:div
+          [:label {:for "username"} "Username: "]
+          [:input {:type "text" :id "username" :name "username"}]]
+        [:div
+          [:label {:for "password"} "Password: "]
+          [:input {:type "password" :id "password" :name "password"}]]]
+      [:div.button
+        [:input {:type "submit" :value "signup"}]]]))
 
 (defn view-balances [balances]
   (html
@@ -64,15 +86,15 @@
             [:td timestamp] [:td (h from)] [:td (h to)]
             [:td (h currency)] [:td amount] [:td (h memo)]]))]))
 
-(defn input-currency-dropdown [account balances]
+(defn input-currency-dropdown [username balances]
   (html
     [:select {:name "currency"}
-      [:option {:value (h account) :selected "selected"} (h account)]
+      [:option {:value (h username) :selected "selected"} (h username)]
       (for [[currency amount] balances
-            :when (not= account currency)]
+            :when (not= username currency)]
         [:option {:value (h currency)} (h currency) " (" amount ")"])]))
 
-(defn view-payment-input [account balances]
+(defn view-payment-input [username balances]
   (html
     [:form {:method "post" :action "/pay"}
       [:fieldset
@@ -81,7 +103,7 @@
             [:label "To: "] [:input {:type "text" :name "to"}]]
           [:div
             [:label "Currency: "]
-            (input-currency-dropdown account balances)]
+            (input-currency-dropdown username balances)]
           [:div
             [:label "Amount: "] [:input {:type "text" :name "amount"}]]
           [:div
@@ -92,36 +114,58 @@
 (defroutes handler
   (GET "/" []
     (view-layout
-      (view-create-account-input)
-      (when-let [account (session-get :account)]
-        (let [balances (mint/balances account)
-              history (mint/history account)]
+      (if-let [username (current-username)]
+        (let [balances (mint/balances username)
+              history (mint/history username)]
           (html
-            (view-payment-input account balances)
+            (view-payment-input username balances)
             (view-balances balances)
-            (view-history history))))))
+            (view-history history)))
+        (view-login))))
 
-  (POST "/create-account" [account]
-    (try
-      (mint/create-account account)
-      (flash-put! :message (str "Account " account " created"))
-      (catch IllegalArgumentException e
-        (flash-put! :error (.getMessage e))))
-    ; XXX cheat here to allow user switching
-    (session-put! :account account)
+  (GET "/login" []
+    (view-layout
+      (view-login)))
+
+  (POST "/login" [username password]
+    (if (mint/valid-login? username password)
+      (session-put! :current-user {:name username :roles #{:user}})
+      (flash-put! :error "Invalid username and/or password"))
     (redirect "/"))
+
+  (GET "/signup" []
+    (view-layout
+      (view-signup)))
+
+  (POST "/signup" [username password]
+    (try
+      (mint/create-account username password)
+      (flash-put! :message (str "Account " username " created"))
+      (session-put! :current-user {:name username :roles #{:user}})
+      (redirect "/")
+      (catch IllegalArgumentException e
+        (flash-put! :error (.getMessage e))
+        (view-layout
+          (view-signup)))))
 
   (POST "/pay" [to currency amount memo]
     (try
-      (let [account (session-get :account)
+      (let [from (current-username)
             amount (Integer/parseInt amount)]
-        (mint/pay account to currency amount memo))
+        (mint/pay from to currency amount memo))
       (flash-put! :message (str "Account " to " paid"))
       (catch NumberFormatException _
         (flash-put! :error "Invalid amount"))
       (catch IllegalArgumentException e
         (flash-put! :error (.getMessage e))))
     (redirect "/"))
+
+  (ANY "/logout*" [] (logout! {}))
+
+  (GET "/permission-denied" []
+    (flash-put! :error "Permission denied, please login ")
+    (view-layout
+      (view-login)))
 
   (ANY "/*" [path]
     (redirect "/")))
@@ -131,6 +175,20 @@
 
 (def development?
   (not production?))
+
+(def security-policy
+     [#"/"                    :any
+      #"/login.*"             :any
+      #"/logout.*"            :any
+      #"/signup.*"            :guest
+      #"/permission-denied.*" :any
+      #".*\.(css|js|png|gif)" :any
+      #".*"                   :user])
+
+(defn authenticator [request]
+  (if-let [user (current-user)]
+    {:name user :roles #{:user}}
+    {:name :anonymous :roles #{:guest}}))
 
 (def app
   (-> #'handler
@@ -142,6 +200,7 @@
     (wrap-exception-logging)
     (wrap-if production?  wrap-failsafe)
     (wrap-if development? wrap-stacktrace)
+    (with-security security-policy authenticator)
     ; prevent wrap-reload from resetting the sessions as well
     (wrap-stateful-session {:store (memory-store custom-session-atom)})))
 

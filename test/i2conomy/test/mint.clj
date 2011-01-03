@@ -111,3 +111,14 @@
       1 (count (history "alice"))
       2 (count (history "bob")))))
 
+(deftest valid-password
+  (do
+    (reset-all!)
+    (create-account "alice" "password123")
+    (is (valid-login? "alice" "password123"))))
+
+(deftest invalid-password
+  (do
+    (reset-all!)
+    (create-account "alice" "password123")
+    (is (not (valid-login? "alice" "passwordXYZ")))))
