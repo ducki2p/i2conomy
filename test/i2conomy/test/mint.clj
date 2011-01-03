@@ -47,7 +47,7 @@
       -95 (balance "alice" "alice")
       95  (balance "bob" "alice")
       49  (balance "bob" "charlie")
-      {"alice" 95 "charlie" 49} (balances "bob"))))
+      {"alice" 95 "bob" 0 "charlie" 49} (balances "bob"))))
 
 (deftest foreign-currency-payment
   (do
@@ -96,7 +96,7 @@
     (create-account "alice")
     (are=
       0  (balance "alice" "alice")
-      {} (balances "alice"))))
+      {"alice" 0} (balances "alice"))))
 
 (deftest simple-history
   (do

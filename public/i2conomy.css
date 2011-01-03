@@ -32,7 +32,7 @@ legend span {
     width:10em;
     text-align:right;
 }
-input {
+input, select {
     padding:0.15em;
     width:10em;
     border:1px solid #ddd;
@@ -41,10 +41,10 @@ input {
     -moz-border-radius:0.4em;
     -khtml-border-radius:0.4em;
 }
-input:hover, input:focus {
+input:hover, input:focus, select:hover, select:focus {
     border-color:#c5c5c5;
     background:#f6f6f6;
-} 
+}
 fieldset {
     border:1px solid #ddd;
     padding:0 0.5em 0.5em;

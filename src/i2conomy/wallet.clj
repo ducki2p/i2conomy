@@ -24,11 +24,11 @@
         [:link {:href "/i2conomy.css" :rel "stylesheet" :type "text/css"}]]
       [:body
         [:h1 "I2Conomy"]
-        [:p "Account: " (session-get :account "Unknown")]
+        [:p "Account: " (h (session-get :account "Unknown"))]
         (when-let [flash (flash-get :error)]
-          [:p.error "Error: " flash])
+          [:p.error "Error: " (h flash)])
         (when-let [flash (flash-get :message)]
-          [:p.message "Message: " flash])
+          [:p.message "Message: " (h flash)])
         content])))
 
 (defn view-create-account-input []
@@ -50,7 +50,7 @@
         [:th "Currency"] [:th "Amount"]]
       (for [[currency amount] balances]
         [:tr
-          [:td currency] [:td amount]])]))
+          [:td (h currency)] [:td (h amount)]])]))
 
 (defn view-history [history]
   (html
@@ -61,19 +61,27 @@
       (for [transfer history]
         (let [{:keys [timestamp from to amount currency memo]} transfer]
           [:tr
-            [:td timestamp] [:td from] [:td to] [:td currency] [:td amount] [:td memo]]))]))
+            [:td timestamp] [:td (h from)] [:td (h to)]
+            [:td (h currency)] [:td amount] [:td (h memo)]]))]))
 
-(defn view-payment-input []
+(defn input-currency-dropdown [account balances]
+  (html
+    [:select {:name "currency"}
+      [:option {:value (h account) :selected "selected"} (h account)]
+      (for [[currency amount] balances
+            :when (not= account currency)]
+        [:option {:value (h currency)} (h currency) " (" amount ")"])]))
+
+(defn view-payment-input [account balances]
   (html
     [:form {:method "post" :action "/pay"}
       [:fieldset
         [:legend "Pay"]
           [:div
-            [:label "From: "] [:input {:type "text" :name "from"}]]
-          [:div
             [:label "To: "] [:input {:type "text" :name "to"}]]
           [:div
-            [:label "Currency: "] [:input {:type "text" :name "currency"}]]
+            [:label "Currency: "]
+            (input-currency-dropdown account balances)]
           [:div
             [:label "Amount: "] [:input {:type "text" :name "amount"}]]
           [:div
@@ -86,23 +94,28 @@
     (view-layout
       (view-create-account-input)
       (when-let [account (session-get :account)]
-        (html
-          (view-payment-input)
-          (view-balances (mint/balances account))
-          (view-history (mint/history account))))))
+        (let [balances (mint/balances account)
+              history (mint/history account)]
+          (html
+            (view-payment-input account balances)
+            (view-balances balances)
+            (view-history history))))))
 
   (POST "/create-account" [account]
     (try
       (mint/create-account account)
-      (session-put! :account account)
       (flash-put! :message (str "Account " account " created"))
       (catch IllegalArgumentException e
         (flash-put! :error (.getMessage e))))
+    ; XXX cheat here to allow user switching
+    (session-put! :account account)
     (redirect "/"))
 
-  (POST "/pay" [from to currency amount memo]
+  (POST "/pay" [to currency amount memo]
     (try
-      (mint/pay from to currency (Integer/parseInt amount) memo)
+      (let [account (session-get :account)
+            amount (Integer/parseInt amount)]
+        (mint/pay account to currency amount memo))
       (flash-put! :message (str "Account " to " paid"))
       (catch NumberFormatException _
         (flash-put! :error "Invalid amount"))

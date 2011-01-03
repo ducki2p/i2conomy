@@ -43,7 +43,7 @@
   (dosync
     (if (not (account-exists? name))
       (let [now (java.util.Date.)
-            account (Account. name (ref (sorted-map)))]
+            account (Account. name (ref (sorted-map name 0)))]
         (alter accounts assoc name account))
       (throw-error :duplicate-account name))))
 
