@@ -23,6 +23,7 @@
         [:title "i2conomy"]
         [:link {:href "/i2conomy.css" :rel "stylesheet" :type "text/css"}]]
       [:body
+        [:h1 "I2Conomy"]
         [:p "Account: " (session-get :account "Unknown")]
         (if-let [flash (flash-get :message)]
           [:p "Message: " flash])
@@ -30,18 +31,28 @@
 
 (defn view-balance-input []
   (html
-    [:h2 "check balance"]
     [:form {:method "post" :action "/balance"}
-      [:label "Account: "] [:input {:type "text" :name "account" :value "duck"}]
-      [:label "Currency: "] [:input {:type "text" :name "currency" :value "duck"}]
-      [:input {:type "submit" :value "check"}]]))
+      [:fieldset
+        [:legend "Balance"]
+        [:div
+          [:label {:for "account"} "Account: "]
+          [:input {:type "text" :id "account" :name "account" :value "duck"}]]
+        [:div
+          [:label {:for "currency"} "Currency: "]
+          [:input {:type "text" :id "currency" :name "currency" :value "duck"}]]]
+      [:div.button
+        [:input {:type "submit" :value "check"}]]]))
 
 (defn view-create-account-input []
   (html
-    [:h2 "create account"]
     [:form {:method "post" :action "/create-account"}
-      [:label "Account: "] [:input {:type "text" :name "account" :value "duck"}]
-      [:input {:type "submit" :value "create"}]]))
+      [:fieldset
+        [:legend "Create Account"]
+        [:div
+          [:label {:for "account"} "Account: "]
+          [:input {:type "text" :id "account" :name "account" :value "duck"}]]]
+      [:div.button
+        [:input {:type "submit" :value "create"}]]]))
 
 (defn view-history [history]
   (html
@@ -56,14 +67,21 @@
 
 (defn view-payment-input []
   (html
-    [:h2 "make payment"]
     [:form {:method "post" :action "/pay"}
-      [:label "From: "] [:input {:type "text" :name "from"}]
-      [:label "To: "] [:input {:type "text" :name "to"}] [:br]
-      [:label "Currency: "] [:input {:type "text" :name "currency"}]
-      [:label "Amount: "] [:input {:type "text" :name "amount"}] [:br]
-      [:label "Memo: "] [:input {:type "text" :name "memo"}]
-      [:input {:type "submit" :value "pay"}]]))
+      [:fieldset
+        [:legend "Pay"]
+          [:div
+            [:label "From: "] [:input {:type "text" :name "from"}]]
+          [:div
+            [:label "To: "] [:input {:type "text" :name "to"}]]
+          [:div
+            [:label "Currency: "] [:input {:type "text" :name "currency"}]]
+          [:div
+            [:label "Amount: "] [:input {:type "text" :name "amount"}]]
+          [:div
+            [:label "Memo: "] [:input {:type "text" :name "memo"}]]]
+        [:div.button
+          [:input {:type "submit" :value "pay"}]]]))
 
 (defroutes handler
   (GET "/" []
