@@ -25,23 +25,9 @@
       [:body
         [:h1 "I2Conomy"]
         [:p "Account: " (session-get :account "Unknown")]
-        (if-let [flash (flash-get :message)]
+        (when-let [flash (flash-get :message)]
           [:p "Message: " flash])
         content])))
-
-(defn view-balance-input []
-  (html
-    [:form {:method "post" :action "/balance"}
-      [:fieldset
-        [:legend "Balance"]
-        [:div
-          [:label {:for "account"} "Account: "]
-          [:input {:type "text" :id "account" :name "account" :value "duck"}]]
-        [:div
-          [:label {:for "currency"} "Currency: "]
-          [:input {:type "text" :id "currency" :name "currency" :value "duck"}]]]
-      [:div.button
-        [:input {:type "submit" :value "check"}]]]))
 
 (defn view-create-account-input []
   (html
@@ -53,6 +39,16 @@
           [:input {:type "text" :id "account" :name "account" :value "duck"}]]]
       [:div.button
         [:input {:type "submit" :value "create"}]]]))
+
+(defn view-balances [balances]
+  (html
+    [:h2 "balances"]
+    [:table
+      [:tr
+        [:th "Currency"] [:th "Amount"]]
+      (for [[currency amount] balances]
+        [:tr
+          [:td currency] [:td amount]])]))
 
 (defn view-history [history]
   (html
@@ -87,15 +83,11 @@
   (GET "/" []
     (view-layout
       (view-create-account-input)
-      (view-balance-input)
       (view-payment-input)
-      (if-let [account (session-get :account)]
-        (view-history (mint/history account)))))
-
-  (POST "/balance" [account currency]
-    (let [balance (mint/balance account currency)]
-      (flash-put! :message (str "Balance for " account "'s account: " balance " " currency " IOU"))
-      (redirect "/")))
+      (when-let [account (session-get :account)]
+        (html
+          (view-balances (mint/balances account))
+          (view-history (mint/history account))))))
 
   (POST "/create-account" [account]
     (do
