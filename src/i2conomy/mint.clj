@@ -8,21 +8,14 @@
 
 (defrecord Transfer [timestamp from to currency amount memo])
 
-(defn- throw-nonexisting-account-exception [name]
-  (throw (IllegalArgumentException.
-           (str "account " name " does not exist"))))
+(def error-messages
+  {:nonexisting-account "account %s does not exist"
+   :duplicate-account "account %s already exists"
+   :nonexisting-currency "currency %s does not exist"
+   :insufficient-balance "insufficient balance for %s on currency %s"})
 
-(defn- throw-duplicate-account-exception [name]
-  (throw (IllegalArgumentException.
-           (str "account " name " already exists"))))
-
-(defn- throw-nonexisting-currency-exception [name]
-  (throw (IllegalArgumentException.
-           (str "currency " name " does not exist"))))
-
-(defn- throw-insufficient-balance-exception [name currency]
-  (throw (IllegalArgumentException.
-           (str "insufficient balance for " name " on currency " currency))))
+(defn- throw-error [err & attr]
+  (throw (IllegalArgumentException. (apply format (error-messages err) attr))))
 
 (defn account-exists? [name]
   (contains? @accounts name))
@@ -35,14 +28,14 @@
   [name currency]
     (if-let [account (get @accounts name)]
       (get @(:balances account) currency 0)
-      (throw-nonexisting-account-exception name)))
+      (throw-error :nonexisting-account name)))
 
 (defn balances
   "Returns all balances of an account"
   [name]
     (if-let [account (get @accounts name)]
       @(:balances account)
-      (throw-nonexisting-account-exception name)))
+      (throw-error :nonexisting-account name)))
 
 (defn create-account
   "Creates a new account"
@@ -52,7 +45,7 @@
       (let [now (java.util.Date.)
             account (Account. name (ref (sorted-map)))]
         (alter accounts assoc name account))
-      (throw-duplicate-account-exception name))))
+      (throw-error :duplicate-account name))))
 
 (defn- add-or-set
   "Returns the sum of x and y. If x is nil it returns y."
@@ -73,13 +66,13 @@
   (dosync
     (cond
       (not (account-exists? from))
-        (throw-nonexisting-account-exception from)
+        (throw-error :nonexisting-account from)
       (not (account-exists? to))
-        (throw-nonexisting-account-exception to)
+        (throw-error :nonexisting-account to)
       (not (currency-exists? currency))
-        (throw-nonexisting-currency-exception currency)
+        (throw-error :nonexisting-currency currency)
       (and (not= from currency) (> amount (balance from currency)))
-        (throw-insufficient-balance-exception from currency)
+        (throw-error :insufficient-balance from currency)
       :else
         (let [now (java.util.Date.)
               transfer (Transfer. now from to currency amount memo)]
@@ -95,7 +88,7 @@
                  (= name (:to %))
                  (= name (:from %)))
               @transfers)
-      (throw-nonexisting-account-exception name)))
+      (throw-error :nonexisting-account name)))
 
 (defn reset-all!
   "Resets all accounts and transfers, use with care!"
