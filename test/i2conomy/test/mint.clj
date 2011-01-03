@@ -8,6 +8,13 @@
     (is (= 0 (count @accounts)))
     (is (= 0 (count @transfers)))))
 
+(deftest create-duplicate-account
+  (do
+    (reset-all!)
+    (create-account "alice")
+    (is (thrown-with-msg? IllegalArgumentException #"account alice already exist"
+                          (create-account "alice")))))
+
 (deftest single-payment
   (do
     (reset-all!)

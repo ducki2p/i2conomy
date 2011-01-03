@@ -12,6 +12,10 @@
   (throw (IllegalArgumentException.
            (str "account " name " does not exist"))))
 
+(defn- throw-duplicate-account-exception [name]
+  (throw (IllegalArgumentException.
+           (str "account " name " already exists"))))
+
 (defn- throw-nonexisting-currency-exception [name]
   (throw (IllegalArgumentException.
            (str "currency " name " does not exist"))))
@@ -44,9 +48,11 @@
   "Creates a new account"
   [name]
   (dosync
-    (let [now (java.util.Date.)
-          account (Account. name (ref (sorted-map)))]
-      (alter accounts assoc name account))))
+    (if (not (account-exists? name))
+      (let [now (java.util.Date.)
+            account (Account. name (ref (sorted-map)))]
+        (alter accounts assoc name account))
+      (throw-duplicate-account-exception name))))
 
 (defn- add-or-set
   "Returns the sum of x and y. If x is nil it returns y."

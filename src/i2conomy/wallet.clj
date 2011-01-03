@@ -25,8 +25,10 @@
       [:body
         [:h1 "I2Conomy"]
         [:p "Account: " (session-get :account "Unknown")]
+        (when-let [flash (flash-get :error)]
+          [:p.error "Error: " flash])
         (when-let [flash (flash-get :message)]
-          [:p "Message: " flash])
+          [:p.message "Message: " flash])
         content])))
 
 (defn view-create-account-input []
@@ -36,7 +38,7 @@
         [:legend "Create Account"]
         [:div
           [:label {:for "account"} "Account: "]
-          [:input {:type "text" :id "account" :name "account" :value "duck"}]]]
+          [:input {:type "text" :id "account" :name "account"}]]]
       [:div.button
         [:input {:type "submit" :value "create"}]]]))
 
@@ -83,24 +85,30 @@
   (GET "/" []
     (view-layout
       (view-create-account-input)
-      (view-payment-input)
       (when-let [account (session-get :account)]
         (html
+          (view-payment-input)
           (view-balances (mint/balances account))
           (view-history (mint/history account))))))
 
   (POST "/create-account" [account]
-    (do
+    (try
       (mint/create-account account)
       (session-put! :account account)
       (flash-put! :message (str "Account " account " created"))
-      (redirect "/")))
+      (catch IllegalArgumentException e
+        (flash-put! :error (.getMessage e))))
+    (redirect "/"))
 
   (POST "/pay" [from to currency amount memo]
-    (do
+    (try
       (mint/pay from to currency (Integer/parseInt amount) memo)
       (flash-put! :message (str "Account " to " paid"))
-      (redirect "/")))
+      (catch NumberFormatException _
+        (flash-put! :error "Invalid amount"))
+      (catch IllegalArgumentException e
+        (flash-put! :error (.getMessage e))))
+    (redirect "/"))
 
   (ANY "/*" [path]
     (redirect "/")))
