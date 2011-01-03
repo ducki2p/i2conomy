@@ -27,10 +27,17 @@
   (account-exists? name))
 
 (defn balance
-  "Gets the balance of an account for given currency"
+  "Returns the balance of an account for given currency"
   [name currency]
     (if-let [account (get @accounts name)]
       (get @(:balances account) currency 0)
+      (throw-nonexisting-account-exception name)))
+
+(defn balances
+  "Returns all balances of an account"
+  [name]
+    (if-let [account (get @accounts name)]
+      @(:balances account)
       (throw-nonexisting-account-exception name)))
 
 (defn create-account
