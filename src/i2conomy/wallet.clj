@@ -14,6 +14,29 @@
         sandbar.auth
         sandbar.stateful-session))
 
+(defn view-menubar []
+  (html
+    [:div#app-menu.span-7.nav-menu
+      [:ul.nav-menu
+        [:li (link-to "/" "Wallet")]
+        [:li (link-to "#" "Contacts")]
+        [:li (link-to "#" "Market")]]]
+    [:div#my-address.span-4.prepend-1
+      [:input {:type "text" :value (h (current-username))}]]
+    [:div#account-menu.span-7.last.nav-menu
+      [:ul.nav-menu
+        [:li (link-to "#" "Settings")]
+        [:li (link-to "#" "Help")]
+        [:li (link-to "/logout" "Sign out")]]]))
+
+(defn view-flash-message []
+  (html
+    [:div#message.span-24.last
+      (for [type [:error :info :success]
+            :let [msg (flash-get type)]
+            :when msg]
+        [:p {:class type} (h msg)])]))
+
 (defn view-layout [& content]
   (html
     (doctype :xhtml-strict)
@@ -21,95 +44,117 @@
       [:head
         [:meta {:http-equiv "Content-type"
                 :content "text/html; charset=utf-8"}]
-        [:title "i2conomy"]
-        [:link {:href "/i2conomy.css" :rel "stylesheet" :type "text/css"}]]
+        [:title "I2Conomy"]
+        [:link {:href "css/screen.css" :rel "stylesheet" :type "text/css" :media "screen, projection"}]
+        [:link {:href "css/print.css" :rel "stylesheet" :type "text/css" :media "print"}]
+        "<!--[if lt IE 8]>"
+        [:link {:href "css/ie.css" :rel "stylesheet" :type "text/css" :media "screen, projection"}]
+        "<![endif]-->"
+        [:link {:href "css/menu.css" :rel "stylesheet" :type "text/css" :media "screen, projection"}]]
       [:body
-        [:h1 "I2Conomy"]
-        (when (any-role-granted? :user)
-          [:div
-            [:p "Account: " (h (current-username))]
-            [:p (link-to "/logout" "Logout")]])
-        (when-let [flash (flash-get :error)]
-          [:p.error "Error: " (h flash)])
-        (when-let [flash (flash-get :message)]
-          [:p.message "Message: " (h flash)])
-        content])))
+        [:div.container
+          [:div#header.span-24.last
+            [:div#title.span-5
+              [:h1 "I2Conomy"]]
+            (when (any-role-granted? :user)
+              (view-menubar))]
+          [:div#content.clear.span-24.last
+            (view-flash-message)
+            content]]])))
 
 (defn view-login []
   (html
-    [:form {:method "post" :action "/login"}
-      [:fieldset
-        [:legend "Login"]
-        [:div
-          [:label {:for "username"} "Username: "]
-          [:input {:type "text" :id "username" :name "username"}]]
-        [:div
-          [:label {:for "password"} "Password: "]
-          [:input {:type "password" :id "password" :name "password"}]]]
-      [:div.button
-        [:input {:type "submit" :value "login"}]]
-      [:p (link-to "/signup" "Signup")]]))
+    [:div#login.clear.span-12.last
+      [:form {:method "post" :action "/login"}
+        [:fieldset
+          [:legend "Sign in"]
+          [:p
+            [:label {:for "username"} "Username: "] [:br]
+            [:input.text {:type "text" :id "username" :name "username"}]]
+          [:p
+            [:label {:for "password"} "Password: "] [:br]
+            [:input.text {:type "password" :id "password" :name "password"}]]
+          [:p.button
+            [:input {:type "submit" :value "Sign in"}]
+            " or "
+            (link-to "/register" "Create an account")]]]]))
 
-(defn view-signup []
+(defn view-register []
   (html
-    [:form {:method "post" :action "/signup"}
-      [:fieldset
-        [:legend "Signup"]
-        [:div
-          [:label {:for "username"} "Username: "]
-          [:input {:type "text" :id "username" :name "username"}]]
-        [:div
-          [:label {:for "password"} "Password: "]
-          [:input {:type "password" :id "password" :name "password"}]]]
-      [:div.button
-        [:input {:type "submit" :value "signup"}]]]))
+    [:div#register.clear.span-12.last
+      [:form {:method "post" :action "/register"}
+        [:fieldset
+          [:legend "Create an account"]
+          [:p
+            [:label {:for "username"} "Username: "] [:br]
+            [:input.text {:type "text" :id "username" :name "username"}]]
+          [:p
+            [:label {:for "password"} "Password: "] [:br]
+            [:input.text {:type "password" :id "password" :name "password"}]]
+          [:p.button
+            [:input {:type "submit" :value "Create an account"}]]]]]))
 
 (defn view-balances [balances]
   (html
-    [:h2 "balances"]
-    [:table
-      [:tr
-        [:th "Currency"] [:th "Amount"]]
-      (for [[currency amount] balances]
+    [:div#balance.clear.span-12
+      [:table {:style "border: 1px grey solid"}
         [:tr
-          [:td (h currency)] [:td (h amount)]])]))
-
-(defn view-history [history]
-  (html
-    [:h2 "history"]
-    [:table
-      [:tr
-        [:th "Timestamp"] [:th "From"] [:th "To"] [:th "Currency"] [:th "Amount"] [:th "Memo"]]
-      (for [transfer history]
-        (let [{:keys [timestamp from to amount currency memo]} transfer]
+          [:th "IOU Balance"] [:th "Amount"]]
+        (for [[currency amount] balances]
           [:tr
-            [:td timestamp] [:td (h from)] [:td (h to)]
-            [:td (h currency)] [:td amount] [:td (h memo)]]))]))
+            [:td (h currency)] [:td (h amount)]])]
+      [:p (link-to "#" "Show all")]]))
+
+(defn format-date [date]
+  (.format (java.text.SimpleDateFormat. "yyyy-MM-dd HH:mm:ss") date))
+
+(defn view-history [username history]
+  (html
+    [:div#transaction-history.clear.span-24.last
+      [:div#transaction-header.span-17
+        [:span {:style "font-size: 14pt"}
+          "Transaction history (last 10)"]]
+      [:div#transaction-pagination.span-7.last
+        "&lt;&lt; Newer | " (link-to "#" "Older &gt;&gt;")]
+      [:div#transaction-table.clear.span-24.last
+        [:table
+          [:tr
+            [:th "Date"] [:th "From / To"] [:th "IOU"] [:th "Amount"] [:th "Memo"]]
+          (for [transfer history]
+            (let [{:keys [timestamp from to amount currency memo]} transfer
+                  from-to (if (= from username ) from (str "To: " to))]
+              [:tr
+                [:td (format-date timestamp)] [:td (h from-to)]
+                [:td (h currency)] [:td amount] [:td (h memo)]]))]]]))
 
 (defn input-currency-dropdown [username balances]
   (html
-    [:select {:name "currency"}
+    [:select.text {:name "currency"}
       [:option {:value (h username) :selected "selected"} (h username)]
       (for [[currency amount] balances
             :when (not= username currency)]
         [:option {:value (h currency)} (h currency) " (" amount ")"])]))
 
-(defn view-payment-input [username balances]
+(defn view-payment-form [username balances]
   (html
-    [:form {:method "post" :action "/pay"}
-      [:fieldset
-        [:legend "Pay"]
-          [:div
-            [:label "To: "] [:input {:type "text" :name "to"}]]
-          [:div
-            [:label "Currency: "]
-            (input-currency-dropdown username balances)]
-          [:div
-            [:label "Amount: "] [:input {:type "text" :name "amount"}]]
-          [:div
-            [:label "Memo: "] [:input {:type "text" :name "memo"}]]]
-        [:div.button
-          [:input {:type "submit" :value "pay"}]]]))
+    [:div#pay.span-12.last
+      [:form#pay-form {:method "post" :action "/pay"}
+        [:fieldset {:style "background-color: #ddd;"}
+          [:legend "Pay"]
+            [:p
+              [:label "To: "] [:br]
+              [:input.text {:type "text" :name "to"}]]
+            [:p
+              [:label "IOU: "] [:br]
+              (input-currency-dropdown username balances)]
+            [:p
+              [:label "Amount: "] [:br]
+              [:input.text {:type "text" :name "amount"}]]
+            [:p
+              [:label "Memo: "] [:br]
+              [:input.text {:type "text" :name "memo"}]]
+            [:p.button
+              [:input {:type "submit" :value "Pay"}]]]]]))
 
 (defroutes handler
   (GET "/" []
@@ -118,9 +163,9 @@
         (let [balances (mint/balances username)
               history (mint/history username)]
           (html
-            (view-payment-input username balances)
             (view-balances balances)
-            (view-history history)))
+            (view-payment-form username balances)
+            (view-history username history)))
         (view-login))))
 
   (GET "/login" []
@@ -133,37 +178,39 @@
       (flash-put! :error "Invalid username and/or password"))
     (redirect "/"))
 
-  (GET "/signup" []
+  (GET "/register" []
     (view-layout
-      (view-signup)))
+      (view-register)))
 
-  (POST "/signup" [username password]
+  (POST "/register" [username password]
     (try
       (mint/create-account username password)
-      (flash-put! :message (str "Account " username " created"))
+      (flash-put! :info (str "Account " username " created"))
       (session-put! :current-user {:name username :roles #{:user}})
       (redirect "/")
       (catch IllegalArgumentException e
         (flash-put! :error (.getMessage e))
         (view-layout
-          (view-signup)))))
+          (view-register)))))
 
   (POST "/pay" [to currency amount memo]
     (try
       (let [from (current-username)
             amount (Integer/parseInt amount)]
         (mint/pay from to currency amount memo))
-      (flash-put! :message (str "Account " to " paid"))
+      (flash-put! :success (str "Account " to " paid"))
       (catch NumberFormatException _
         (flash-put! :error "Invalid amount"))
       (catch IllegalArgumentException e
         (flash-put! :error (.getMessage e))))
     (redirect "/"))
 
-  (ANY "/logout*" [] (logout! {}))
+  (ANY "/logout*" []
+    (flash-put! :info "You are signed out")
+    (logout! {}))
 
   (GET "/permission-denied" []
-    (flash-put! :error "Permission denied, please login ")
+    (flash-put! :error "Permission denied, please login")
     (view-layout
       (view-login)))
 
@@ -180,11 +227,12 @@
      [#"/"                    :any
       #"/login.*"             :any
       #"/logout.*"            :any
-      #"/signup.*"            :guest
+      #"/register.*"          :guest
       #"/permission-denied.*" :any
       #".*\.(css|js|png|gif)" :any
       #".*"                   :user])
 
+; XXX this isn't used correctly, I think
 (defn authenticator [request]
   (if-let [user (current-user)]
     {:name user :roles #{:user}}
