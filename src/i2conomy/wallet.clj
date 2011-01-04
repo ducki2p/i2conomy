@@ -122,10 +122,11 @@
             [:th "Date"] [:th "From / To"] [:th "IOU"] [:th "Amount"] [:th "Memo"]]
           (for [transfer history]
             (let [{:keys [timestamp from to amount currency memo]} transfer
-                  from-to (if (= from username ) from (str "To: " to))]
+                  from-to (if (= to username ) from (str "To: " to))
+                  amount-rel (if (= to username ) amount (- amount))]
               [:tr
                 [:td (format-date timestamp)] [:td (h from-to)]
-                [:td (h currency)] [:td amount] [:td (h memo)]]))]]]))
+                [:td (h currency)] [:td amount-rel] [:td (h memo)]]))]]]))
 
 (defn input-currency-dropdown [username balances]
   (html
