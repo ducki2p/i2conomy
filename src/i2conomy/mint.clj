@@ -89,11 +89,10 @@
   "Gets the history of an account"
   [username]
     (account-exists username)
-    (let [account (get @accounts username)]
-      (filter #(or
-                 (= username (:to %))
-                 (= username (:from %)))
-              @transfers)))
+    (filter #(or
+                (= username (:to %))
+                (= username (:from %)))
+            @transfers))
 
 (defn reset-all!
   "Resets all accounts and transfers, use with care!"
