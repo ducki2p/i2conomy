@@ -1,4 +1,6 @@
 (ns i2conomy.middleware
+  (:require [clojure.contrib.sql :as sql])
+  (:require [i2conomy.db :as db])
   (:require [clj-stacktrace.repl :as strp]))
 
 (defn- log [msg & vals]
@@ -43,4 +45,8 @@
         {:status 500
          :headers {"Content-Type" "text/plain"}
          :body "We're sorry, something went wrong."}))))
+
+(defn with-db [handler]
+  (fn [req]
+    (sql/with-connection db/file-db (handler req))))
 

@@ -8,6 +8,8 @@
                  [compojure "0.5.3"]
                  [hiccup "0.3.1"]
                  [sandbar/sandbar "0.3.0"]
-                 [org.jasypt/jasypt "1.7"]]
-  :dev-dependencies [[lein-run "1.0.1-SNAPSHOT"]]
+                 [org.jasypt/jasypt "1.7"]
+                 [org.bituf/clj-dbcp "0.4"]
+                 [org.xerial/sqlite-jdbc "3.7.2"]]
+  :dev-dependencies [[org.clojars.cais/lein-run "1.0.1-SNAPSHOT"]]
   :main script.run)

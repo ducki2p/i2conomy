@@ -100,7 +100,7 @@
       [:table {:style "border: 1px grey solid"}
         [:tr
           [:th "IOU Balance"] [:th "Amount"]]
-        (for [[currency amount] balances]
+        (for [{:keys [currency amount]} balances]
           [:tr
             [:td (h currency)] [:td (h amount)]])]
       [:p (link-to "#" "Show all")]]))
@@ -120,19 +120,18 @@
         [:table
           [:tr
             [:th "Date"] [:th "From / To"] [:th "IOU"] [:th "Amount"] [:th "Memo"]]
-          (for [transfer history]
-            (let [{:keys [timestamp from to amount currency memo]} transfer
-                  from-to (if (= to username ) from (str "To: " to))
-                  amount-rel (if (= to username ) amount (- amount))]
-              [:tr
-                [:td (format-date timestamp)] [:td (h from-to)]
-                [:td (h currency)] [:td amount-rel] [:td (h memo)]]))]]]))
+          (for [{:keys [timestamp from to amount currency memo]} history
+                :let [from-to (if (= to username ) from (str "To: " to))
+                     amount-rel (if (= to username ) amount (- amount))]]
+            [:tr
+              [:td (format-date timestamp)] [:td (h from-to)]
+              [:td (h currency)] [:td amount-rel] [:td (h memo)]])]]]))
 
 (defn input-currency-dropdown [username balances]
   (html
     [:select.text {:name "currency"}
       [:option {:value (h username) :selected "selected"} (h username)]
-      (for [[currency amount] balances
+      (for [{:keys [currency amount]} balances
             :when (not= username currency)]
         [:option {:value (h currency)} (h currency) " (" amount ")"])]))
 
@@ -241,6 +240,7 @@
 
 (def app
   (-> #'handler
+    (with-db)
     (wrap-file "public")
     (wrap-file-info)
     (wrap-request-logging)
