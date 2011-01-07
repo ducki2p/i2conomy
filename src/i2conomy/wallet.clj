@@ -229,7 +229,7 @@
       #"/logout.*"            :any
       #"/register.*"          :guest
       #"/permission-denied.*" :any
-      #".*\.(css|js|png|gif)" :any
+      #".*\.(css|ico|js|png|gif)" :any
       #".*"                   :user])
 
 ; XXX this isn't used correctly, I think
