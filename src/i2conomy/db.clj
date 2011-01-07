@@ -59,7 +59,7 @@
     (doall rs)))
 
 (defn create-account [username password-hash]
-  (do 
+  (sql/transaction
     (sql/insert-rows :accounts [username password-hash])
     (sql/insert-rows :balances [username username 0])))
 
@@ -72,6 +72,12 @@
       ["username=? AND currency=?" username currency]
       {:amount (+ balance amount)})
     (sql/insert-rows :balances [username currency amount])))
+
+(defn pay [timestamp from to currency amount memo]
+  (sql/transaction
+    (create-transfer timestamp from to currency amount memo)
+    (update-balance from currency (- amount))
+    (update-balance to currency amount)))
 
 (defn get-transfers [username]
   (sql/with-query-results rs ["SELECT * FROM transfers WHERE [from]=? OR [to]=? ORDER BY timestamp DESC"

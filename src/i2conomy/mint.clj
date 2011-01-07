@@ -61,10 +61,7 @@
     (currency-exists currency)
     (sufficient-balance from currency amount)
     (let [now (java.util.Date.)]
-      ; TODO make atomic
-      (db/create-transfer now from to currency amount memo)
-      (db/update-balance from currency (- amount))
-      (db/update-balance to currency amount))))
+      (db/pay now from to currency amount memo))))
 
 (defn history
   "Gets the transfer history of an account"
