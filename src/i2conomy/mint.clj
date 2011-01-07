@@ -49,7 +49,8 @@
   ([username password]
     (do
       (account-available username)
-      (let [password-hash (.encryptPassword (StrongPasswordEncryptor.) password)]
+      (let [password-hash (if (empty? password) ""
+                            (.encryptPassword (StrongPasswordEncryptor.) password))]
         (db/create-account username password-hash)))))
 
 (defn pay
